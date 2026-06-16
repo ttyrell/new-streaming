@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Discover the best new TV shows and movies streaming this upcoming weekend. Watchlist your favorites and check Rotten Tomatoes ratings.">
+  <title>Weekend Streamer | Discovery Guide</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#f5f4f0">
+  <link rel="apple-touch-icon" href="icon.png">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header>
+      <div class="header-top">
+        <div class="title-area">
+          <h1>Weekend Streamer</h1>
+          <p>Your guide to the newest TV shows & movies releasing this weekend</p>
+        </div>
+        <div class="weekend-picker-wrapper">
+          <label for="weekend-select" class="weekend-picker-label">Weekend:</label>
+          <select id="weekend-select" class="weekend-select">
+            <option value="2026-06-19">June 19 – 21, 2026 (Upcoming)</option>
+            <option value="2026-06-12">June 12 – 14, 2026 (Previous)</option>
+            <option value="2026-06-26">June 26 – 28, 2026 (Next)</option>
+          </select>
+        </div>
+      </div>
+    </header>
+
+    <!-- Controls & Filters -->
+    <section class="controls-panel">
+      <div class="search-bar-wrapper">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" class="search-input" placeholder="Search by title, genre, cast, or synopsis...">
+      </div>
+
+      <div class="filter-groups">
+        <div class="filter-tabs">
+          <button class="filter-btn active" data-filter="all">All Releases</button>
+          <button class="filter-btn" data-filter="movie">Movies</button>
+          <button class="filter-btn" data-filter="tv">TV Shows</button>
+          <button class="filter-btn" data-filter="watchlist">My Watchlist 💖</button>
+        </div>
+
+        <div class="platform-filter">
+          <label for="platform-select" class="platform-filter-label">Service:</label>
+          <select id="platform-select" class="platform-select">
+            <option value="all">All Services</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <!-- Spotlight Section -->
+    <section id="spotlight-section" style="display: none;">
+      <h2 class="section-title">✨ Spotlight Releases</h2>
+      <div class="spotlight-grid" id="spotlight-grid">
+        <!-- Spotlight cards dynamically inserted here -->
+      </div>
+    </section>
+
+    <!-- Main List Section -->
+    <section id="releases-section">
+      <h2 class="section-title">🍿 Weekend Listings</h2>
+      <div class="standard-grid" id="releases-grid">
+        <!-- Regular cards dynamically inserted here -->
+      </div>
+    </section>
+  </div>
+
+  <!-- Detail Modal -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-container" id="modal-container">
+      <button class="modal-close" id="modal-close">&times;</button>
+      <div class="modal-hero" id="modal-hero">
+        <div class="modal-hero-overlay"></div>
+        <div class="modal-hero-content">
+          <div class="platform-pill" id="modal-platform">
+            <!-- Platform info -->
+          </div>
+          <h2 id="modal-title" style="font-size: 2rem; margin-top: 0.5rem;">Movie Title</h2>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="modal-details-grid">
+          <div class="modal-info-row">
+            <span class="type-badge" id="modal-type">Movie</span>
+            <span id="modal-rating" style="font-weight: 600;">PG-13</span>
+            <span id="modal-info-text" style="color: var(--text-secondary);">2026-06-19 • 2h 14m • ★ 4.8</span>
+          </div>
+
+          <p class="modal-synopsis" id="modal-synopsis">
+            Detailed synopsis goes here.
+          </p>
+
+          <div class="modal-cast" id="modal-cast-section">
+            <h4>Starring</h4>
+            <div class="cast-list" id="cast-list">
+              <!-- Cast members inserted here -->
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button class="btn-secondary" id="btn-modal-watchlist">➕ Add to Watchlist</button>
+            <a href="#" target="_blank" class="btn-primary" id="btn-rotten-tomatoes">🍅 View on Rotten Tomatoes</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application scripts -->
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('Service Worker registered successfully.', reg.scope))
+          .catch(err => console.error('Service Worker registration failed.', err));
+      });
+    }
+  </script>
+</body>
+</html>
