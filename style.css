@@ -679,3 +679,12 @@ header {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+/* Air Date Highlight */
+.air-date-highlight {
+  color: var(--success);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+}
