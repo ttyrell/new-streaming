@@ -688,3 +688,102 @@ header {
   align-items: center;
   gap: 0.15rem;
 }
+
+/* Responsive mobile optimizations */
+@media (max-width: 600px) {
+  .app-container {
+    padding: 1.5rem 1rem;
+  }
+  
+  .header-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .title-area h1 {
+    font-size: 1.85rem;
+  }
+  
+  .weekend-picker-wrapper {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .weekend-select {
+    flex-grow: 1;
+    max-width: 250px;
+  }
+  
+  .controls-panel {
+    padding: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  .filter-groups {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .filter-tabs {
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    display: flex;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .filter-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .filter-btn {
+    flex-shrink: 0;
+    padding: 0.4rem 0.85rem;
+  }
+  
+  .platform-filter {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .platform-select {
+    flex-grow: 1;
+    max-width: 200px;
+  }
+  
+  .standard-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  
+  .modal-overlay {
+    padding: 1rem;
+  }
+  
+  .modal-container {
+    border-radius: 12px;
+  }
+  
+  .modal-hero {
+    height: 120px;
+    padding: 1rem;
+  }
+  
+  .modal-body {
+    padding: 1rem;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .modal-actions .btn-primary,
+  .modal-actions .btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+}

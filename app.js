@@ -2,6 +2,28 @@
 const TMDB_API_KEY = 'a3baddb0263957e23fc56b4517ee6499';
 const BASE_URL = 'https://api.themoviedb.org/3';
 
+// Streaming Platform Priority (preferred services to show first)
+const PLATFORM_PRIORITY = [
+  "Netflix",
+  "Max",
+  "HBO Max",
+  "Paramount+",
+  "Paramount Plus",
+  "Disney+",
+  "Disney Plus",
+  "Peacock",
+  "Peacock Premium",
+  "Hulu",
+  "Apple TV+",
+  "Apple TV",
+  "Amazon Prime Video",
+  "Prime Video",
+  "MGM+",
+  "Showtime",
+  "Starz",
+  "Crunchyroll"
+];
+
 // Application State
 let activeTypeFilter = 'all';
 let activePlatformFilter = 'all';
@@ -33,16 +55,17 @@ const castList = document.getElementById('cast-list');
 const btnRottenTomatoes = document.getElementById('btn-rotten-tomatoes');
 const btnModalWatchlist = document.getElementById('btn-modal-watchlist');
 
-// Helper to check if a release falls on the selected week (Monday to Sunday)
+// Helper to check if a release falls on the selected weekend (Wednesday to Sunday)
 function isReleaseInSelectedWeekend(releaseDateStr, weekendStartDateStr) {
+  if (!releaseDateStr) return false;
   const releaseDate = new Date(releaseDateStr + 'T00:00:00');
   const startDate = new Date(weekendStartDateStr + 'T00:00:00');
   
   const qStart = new Date(startDate);
-  qStart.setDate(startDate.getDate() - 4); // Preceding Monday
+  qStart.setDate(startDate.getDate() - 2); // Preceding Wednesday (Friday - 2 days)
   
   const qEnd = new Date(startDate);
-  qEnd.setDate(startDate.getDate() + 2); // Sunday
+  qEnd.setDate(startDate.getDate() + 2); // Sunday (Friday + 2 days)
   
   return releaseDate >= qStart && releaseDate <= qEnd;
 }
@@ -59,8 +82,121 @@ function formatAiringDate(dateStr) {
   }
 }
 
+// Helper to extract the US digital/streaming release date for movies
+function getUSDigitalReleaseDate(detailsData, selectedWeekend) {
+  if (!detailsData || !detailsData.release_dates || !detailsData.release_dates.results) {
+    return null;
+  }
+  const usRelease = detailsData.release_dates.results.find(r => r.iso_3166_1 === "US");
+  if (usRelease && usRelease.release_dates) {
+    // 1. First, look for a digital/TV release that falls exactly in the selected weekend range (Wednesday to Sunday)
+    if (selectedWeekend) {
+      const weekendRelease = usRelease.release_dates.find(rd => {
+        if (rd.type === 4 || rd.type === 6) {
+          const dateStr = rd.release_date.split('T')[0];
+          return isReleaseInSelectedWeekend(dateStr, selectedWeekend);
+        }
+        return false;
+      });
+      if (weekendRelease) {
+        return weekendRelease.release_date.split('T')[0];
+      }
+    }
+
+    // 2. Fallback: look for the first digital (type 4) or TV (type 6) release
+    const digitalRelease = usRelease.release_dates.find(rd => rd.type === 4 || rd.type === 6);
+    if (digitalRelease) {
+      return digitalRelease.release_date.split('T')[0];
+    }
+    // 3. Fallback: look for type 3 (Theatrical) or any type if digital not found
+    const fallbackRelease = usRelease.release_dates.find(rd => rd.type === 3) || usRelease.release_dates[0];
+    if (fallbackRelease) {
+      return fallbackRelease.release_date.split('T')[0];
+    }
+  }
+  return null;
+}
+
+// Helper to format date in local YYYY-MM-DD format (prevents timezone shifts)
+function getLocalDateString(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// Helper to format the display range text for the weekend dropdown
+function formatWeekendText(fridayDate) {
+  const sundayDate = new Date(fridayDate);
+  sundayDate.setDate(fridayDate.getDate() + 2);
+  
+  const fMonth = fridayDate.toLocaleDateString('en-US', { month: 'long' });
+  const fDay = fridayDate.getDate();
+  const fYear = fridayDate.getFullYear();
+  
+  const sMonth = sundayDate.toLocaleDateString('en-US', { month: 'long' });
+  const sDay = sundayDate.getDate();
+  const sYear = sundayDate.getFullYear();
+  
+  if (fYear !== sYear) {
+    return `${fridayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} – ${sundayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  }
+  
+  if (fMonth !== sMonth) {
+    const fMonthShort = fridayDate.toLocaleDateString('en-US', { month: 'short' });
+    const sMonthShort = sundayDate.toLocaleDateString('en-US', { month: 'short' });
+    return `${fMonthShort} ${fDay} – ${sMonthShort} ${sDay}, ${fYear}`;
+  }
+  
+  return `${fMonth} ${fDay} – ${sDay}, ${fYear}`;
+}
+
+// Dynamically generate 5 weekend choices centered on the current week's Friday
+function populateWeekendDropdown() {
+  const now = new Date();
+  const day = now.getDay();
+  let diffToFriday = 0;
+  if (day === 0) diffToFriday = -2;
+  else if (day === 6) diffToFriday = -1;
+  else diffToFriday = 5 - day;
+  
+  const currentFriday = new Date(now);
+  currentFriday.setDate(now.getDate() + diffToFriday);
+  
+  weekendSelect.innerHTML = '';
+  
+  for (let offset = -1; offset <= 1; offset++) {
+    const fDate = new Date(currentFriday);
+    fDate.setDate(currentFriday.getDate() + offset * 7);
+    
+    const value = getLocalDateString(fDate);
+    const rangeText = formatWeekendText(fDate);
+    
+    let label = '';
+    if (offset === 0) {
+      label = ' (Current)';
+    } else if (offset === -1) {
+      label = ' (Previous)';
+    } else if (offset === 1) {
+      label = ' (Upcoming)';
+    }
+    
+    const option = document.createElement('option');
+    option.value = value;
+    option.textContent = `${rangeText}${label}`;
+    
+    if (offset === 0) {
+      option.selected = true;
+    }
+    
+    weekendSelect.appendChild(option);
+  }
+}
+
 // Initialize App
 document.addEventListener('DOMContentLoaded', async () => {
+  // Populate the weekend picker dropdown dynamically
+  populateWeekendDropdown();
   // 1. Fetch Genre Map first
   await initGenres();
 
@@ -239,6 +375,10 @@ async function loadWeekendData() {
       moviePromises.push(fetch(`${BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&release_date.gte=${qStartDateStr}&release_date.lte=${qEndDateStr}&with_release_type=4|6&region=US&sort_by=popularity.desc&page=${page}`));
       tvPromises.push(fetch(`${BASE_URL}/discover/tv?api_key=${TMDB_API_KEY}&air_date.gte=${qStartDateStr}&air_date.lte=${qEndDateStr}&sort_by=popularity.desc&page=${page}`));
     }
+    // Also fetch the first 2 pages of TV series premieres (first_air_date) to capture new low-popularity shows
+    for (let page = 1; page <= 2; page++) {
+      tvPromises.push(fetch(`${BASE_URL}/discover/tv?api_key=${TMDB_API_KEY}&first_air_date.gte=${qStartDateStr}&first_air_date.lte=${qEndDateStr}&sort_by=popularity.desc&page=${page}`));
+    }
 
     // 2. Fetch Curated Items details directly if configured for this weekend
     const curated = CURATED_RELEASES[selectedWeekend] || { tv: [], movie: [] };
@@ -249,7 +389,7 @@ async function loadWeekendData() {
     let curatedTv = [];
 
     if (curatedMovieIds.length > 0 || curatedTvIds.length > 0) {
-      const cMovieResponses = await Promise.all(curatedMovieIds.map(id => fetch(`${BASE_URL}/movie/${id}?api_key=${TMDB_API_KEY}`)));
+      const cMovieResponses = await Promise.all(curatedMovieIds.map(id => fetch(`${BASE_URL}/movie/${id}?api_key=${TMDB_API_KEY}&append_to_response=release_dates`)));
       const cTvResponses = await Promise.all(curatedTvIds.map(id => fetch(`${BASE_URL}/tv/${id}?api_key=${TMDB_API_KEY}`)));
       
       const cMoviesData = await Promise.all(cMovieResponses.map(r => r.json()));
@@ -307,9 +447,12 @@ async function loadWeekendData() {
     await Promise.all(combined.map(async (item) => {
       try {
         const pathType = item.type === "Movie" ? "movie" : "tv";
+        const detailsUrl = item.type === "Movie"
+          ? `${BASE_URL}/movie/${item.id}?api_key=${TMDB_API_KEY}&append_to_response=release_dates`
+          : `${BASE_URL}/tv/${item.id}?api_key=${TMDB_API_KEY}`;
         const [providersRes, detailsRes] = await Promise.all([
           fetch(`${BASE_URL}/${pathType}/${item.id}/watch/providers?api_key=${TMDB_API_KEY}`),
-          fetch(`${BASE_URL}/${pathType}/${item.id}?api_key=${TMDB_API_KEY}`)
+          fetch(detailsUrl)
         ]);
 
         const providersData = await providersRes.json();
@@ -317,22 +460,83 @@ async function loadWeekendData() {
         
         item.details = detailsData;
 
-        // Set duration if movie details fetched
-        if (item.type === "Movie" && detailsData.runtime) {
-          item.duration = `${Math.floor(detailsData.runtime / 60)}h ${detailsData.runtime % 60}m`;
+        // Set duration and streaming date if movie details fetched
+        if (item.type === "Movie") {
+          if (detailsData.runtime) {
+            item.duration = `${Math.floor(detailsData.runtime / 60)}h ${detailsData.runtime % 60}m`;
+          }
+          const streamingDate = getUSDigitalReleaseDate(detailsData, selectedWeekend);
+          if (streamingDate) {
+            item.streamingDate = streamingDate;
+          }
         }
 
         // Set watch provider
         const usProviders = providersData.results && providersData.results.US;
         if (usProviders) {
-          const flatrate = usProviders.flatrate || usProviders.ads || usProviders.buy || usProviders.rent || [];
+          // Exclude "Apple TV Store" from the results as it represents buy/rent options that clutter the guide
+          const filterOutStore = list => (list || []).filter(p => p.provider_name !== "Apple TV Store");
+          
+          const flatrate = filterOutStore(usProviders.flatrate);
+          const ads = filterOutStore(usProviders.ads);
+          const buy = filterOutStore(usProviders.buy);
+          const rent = filterOutStore(usProviders.rent);
+
+          let providersList = [];
           if (flatrate.length > 0) {
-            item.platform = flatrate[0].provider_name;
-            item.platformLogoUrl = `https://image.tmdb.org/t/p/original${flatrate[0].logo_path}`;
-            item.allPlatforms = flatrate.map(p => ({
+            providersList = flatrate;
+          } else if (ads.length > 0) {
+            providersList = ads;
+          } else if (buy.length > 0) {
+            providersList = buy;
+          } else if (rent.length > 0) {
+            providersList = rent;
+          }
+
+          if (providersList.length > 0) {
+            // Sort based on priority list of major subscription platforms
+            providersList.sort((a, b) => {
+              const nameA = a.provider_name.toLowerCase();
+              const nameB = b.provider_name.toLowerCase();
+              
+              let indexA = PLATFORM_PRIORITY.findIndex(p => nameA.includes(p.toLowerCase()));
+              let indexB = PLATFORM_PRIORITY.findIndex(p => nameB.includes(p.toLowerCase()));
+              
+              if (indexA === -1) indexA = 999;
+              if (indexB === -1) indexB = 999;
+              
+              return indexA - indexB;
+            });
+
+            const bestProvider = providersList[0];
+            item.platform = bestProvider.provider_name;
+            item.platformLogoUrl = `https://image.tmdb.org/t/p/original${bestProvider.logo_path}`;
+            item.allPlatforms = providersList.map(p => ({
               name: p.provider_name,
               logo: `https://image.tmdb.org/t/p/original${p.logo_path}`
             }));
+          }
+        }
+
+        // Fallback for TV networks if watch providers are empty in TMDB
+        if ((!item.platform || item.platform === "Streaming" || item.platform === "Digital Release") && detailsData.networks && detailsData.networks.length > 0) {
+          const priorityNetworks = detailsData.networks.filter(n => {
+            const name = n.name.toLowerCase();
+            return PLATFORM_PRIORITY.some(p => name.includes(p.toLowerCase()));
+          });
+          
+          const bestNetwork = priorityNetworks[0] || detailsData.networks[0];
+          if (bestNetwork) {
+            item.platform = bestNetwork.name;
+            if (bestNetwork.logo_path) {
+              item.platformLogoUrl = `https://image.tmdb.org/t/p/original${bestNetwork.logo_path}`;
+            } else {
+              item.platformLogoUrl = getLogoForPlatform(bestNetwork.name);
+            }
+            item.allPlatforms = [{
+              name: bestNetwork.name,
+              logo: item.platformLogoUrl
+            }];
           }
         }
 
@@ -361,7 +565,20 @@ async function loadWeekendData() {
       }
     }));
 
-    currentReleases = combined;
+    // Filter to only include curated releases or releases within the Wednesday-Sunday range of this weekend
+    currentReleases = combined.filter(item => {
+      let actualAirDate = item.type === 'Movie' ? (item.streamingDate || item.releaseDate) : item.releaseDate;
+      if (item.type === 'TV Show') {
+        const lastEp = item.details && item.details.last_episode_to_air;
+        const nextEp = item.details && item.details.next_episode_to_air;
+        if (nextEp && isReleaseInSelectedWeekend(nextEp.air_date, selectedWeekend)) {
+          actualAirDate = nextEp.air_date;
+        } else if (lastEp && isReleaseInSelectedWeekend(lastEp.air_date, selectedWeekend)) {
+          actualAirDate = lastEp.air_date;
+        }
+      }
+      return item.isCurated || isReleaseInSelectedWeekend(actualAirDate, selectedWeekend);
+    });
     
     // 4. Update Platform Selector dynamically
     populatePlatformDropdown();
@@ -505,7 +722,7 @@ function createCardHtml(item, isSpotlight) {
   const genres = (item.genreIds || []).map(id => genreMap[id]).filter(Boolean).slice(0, 2);
 
   const selectedWeekend = weekendSelect.value;
-  let airDate = item.releaseDate;
+  let airDate = item.type === 'Movie' ? (item.streamingDate || item.releaseDate) : item.releaseDate;
   if (item.type === 'TV Show') {
     const lastEp = item.details && item.details.last_episode_to_air;
     const nextEp = item.details && item.details.next_episode_to_air;
@@ -525,11 +742,6 @@ function createCardHtml(item, isSpotlight) {
   `;
   if (item.type === 'Movie') {
     metaHtml += `<span>${item.duration !== "N/A" ? item.duration : "Movie"}</span>`;
-    const originalDate = item.details && item.details.release_date;
-    if (originalDate) {
-      const year = new Date(originalDate).getFullYear();
-      metaHtml += `<span>•</span><span>Theaters: ${year}</span>`;
-    }
   } else if (item.type === 'TV Show') {
     let typeSubtext = "";
     const lastEp = item.details && item.details.last_episode_to_air;
@@ -611,7 +823,7 @@ async function openModal(id) {
   }
 
   const selectedWeekend = weekendSelect.value;
-  let airDate = item.releaseDate;
+  let airDate = item.type === 'Movie' ? (item.streamingDate || item.releaseDate) : item.releaseDate;
   if (item.type === 'TV Show') {
     const lastEp = item.details && item.details.last_episode_to_air;
     const nextEp = item.details && item.details.next_episode_to_air;
@@ -623,14 +835,16 @@ async function openModal(id) {
   }
   const formattedAirDate = formatAiringDate(airDate);
 
-  let modalMeta = `${formattedAirDate ? `Airing: ${formattedAirDate}` : (item.releaseDate || "")}`;
+  let dateLabel = "";
+  if (formattedAirDate) {
+    dateLabel = item.type === 'Movie' ? `Streaming: ${formattedAirDate}` : `Airing: ${formattedAirDate}`;
+  } else {
+    dateLabel = item.releaseDate || "";
+  }
+
+  let modalMeta = dateLabel;
   if (item.type === 'Movie') {
     modalMeta += ` • ${item.duration !== "N/A" ? item.duration : "Movie"}`;
-    const originalDate = item.details && item.details.release_date;
-    if (originalDate) {
-      const year = new Date(originalDate).getFullYear();
-      modalMeta += ` • Theaters: ${year}`;
-    }
   } else if (item.type === 'TV Show') {
     let typeSubtext = "";
     const lastEp = item.details && item.details.last_episode_to_air;
