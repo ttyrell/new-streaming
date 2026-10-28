@@ -4,7 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Discover the best new TV shows and movies streaming this upcoming weekend. Watchlist your favorites and check Rotten Tomatoes ratings.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://image.tmdb.org; connect-src 'self' https://api.themoviedb.org;">
   <title>Weekend Streamer | Discovery Guide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap">
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#f5f4f0">
@@ -17,30 +21,31 @@
       <div class="header-top">
         <div class="title-area">
           <h1>Weekend Streamer</h1>
-          <p>Your guide to the newest TV shows & movies releasing this weekend</p>
+          <p>Your guide to the newest TV shows &amp; movies releasing this weekend</p>
         </div>
         <div class="weekend-picker-wrapper">
           <label for="weekend-select" class="weekend-picker-label">Weekend:</label>
           <select id="weekend-select" class="weekend-select">
             <!-- Dynamically populated -->
           </select>
+          <button type="button" id="btn-api-settings" class="settings-btn" aria-label="Configure TMDB API Key" title="TMDB API Key Settings">🔑</button>
         </div>
       </div>
     </header>
 
     <!-- Controls & Filters -->
-    <section class="controls-panel">
+    <section class="controls-panel" aria-label="Search and filter controls">
       <div class="search-bar-wrapper">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="search-input" class="search-input" placeholder="Search by title, genre, cast, or synopsis...">
+        <span class="search-icon" aria-hidden="true">🔍</span>
+        <input type="search" id="search-input" class="search-input" aria-label="Search by title, genre, cast, or synopsis" placeholder="Search by title, genre, cast, or synopsis...">
       </div>
 
       <div class="filter-groups">
-        <div class="filter-tabs">
-          <button class="filter-btn active" data-filter="all">All Releases</button>
-          <button class="filter-btn" data-filter="movie">Movies</button>
-          <button class="filter-btn" data-filter="tv">TV Shows</button>
-          <button class="filter-btn" data-filter="watchlist">My Watchlist 💖</button>
+        <div class="filter-tabs" role="tablist" aria-label="Release type filter">
+          <button class="filter-btn active" role="tab" aria-selected="true" data-filter="all">All Releases</button>
+          <button class="filter-btn" role="tab" aria-selected="false" data-filter="movie">Movies</button>
+          <button class="filter-btn" role="tab" aria-selected="false" data-filter="tv">TV Shows</button>
+          <button class="filter-btn" role="tab" aria-selected="false" data-filter="watchlist">My Watchlist 💖</button>
         </div>
 
         <div class="platform-filter">
@@ -53,26 +58,26 @@
     </section>
 
     <!-- Spotlight Section -->
-    <section id="spotlight-section" style="display: none;">
-      <h2 class="section-title">✨ Spotlight Releases</h2>
+    <section id="spotlight-section" style="display: none;" aria-labelledby="spotlight-heading">
+      <h2 class="section-title" id="spotlight-heading">✨ Spotlight Releases</h2>
       <div class="spotlight-grid" id="spotlight-grid">
         <!-- Spotlight cards dynamically inserted here -->
       </div>
     </section>
 
     <!-- Main List Section -->
-    <section id="releases-section">
-      <h2 class="section-title">🍿 Weekend Listings</h2>
-      <div class="standard-grid" id="releases-grid">
+    <section id="releases-section" aria-labelledby="releases-heading">
+      <h2 class="section-title" id="releases-heading">🍿 Weekend Listings</h2>
+      <div class="standard-grid" id="releases-grid" aria-live="polite">
         <!-- Regular cards dynamically inserted here -->
       </div>
     </section>
   </div>
 
   <!-- Detail Modal -->
-  <div class="modal-overlay" id="modal-overlay">
-    <div class="modal-container" id="modal-container">
-      <button class="modal-close" id="modal-close">&times;</button>
+  <div class="modal-overlay" id="modal-overlay" aria-hidden="true">
+    <div class="modal-container" id="modal-container" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <button class="modal-close" id="modal-close" aria-label="Close details modal">&times;</button>
       <div class="modal-hero" id="modal-hero">
         <div class="modal-hero-overlay"></div>
         <div class="modal-hero-content">
@@ -102,9 +107,35 @@
           </div>
 
           <div class="modal-actions">
-            <button class="btn-secondary" id="btn-modal-watchlist">➕ Add to Watchlist</button>
-            <a href="#" target="_blank" class="btn-primary" id="btn-rotten-tomatoes">🍅 View on Rotten Tomatoes</a>
+            <button class="btn-secondary" id="btn-modal-watchlist" type="button">➕ Add to Watchlist</button>
+            <a href="#" target="_blank" rel="noopener noreferrer" class="btn-primary" id="btn-rotten-tomatoes">🍅 View on Rotten Tomatoes</a>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- API Key Settings Modal -->
+  <div class="modal-overlay" id="api-key-modal-overlay" aria-hidden="true">
+    <div class="modal-container api-modal-container" role="dialog" aria-modal="true" aria-labelledby="api-modal-title">
+      <button class="modal-close" id="api-modal-close" aria-label="Close API key settings">&times;</button>
+      <div class="modal-body">
+        <div class="modal-details-grid">
+          <div>
+            <h2 id="api-modal-title" style="font-size: 1.4rem; font-weight: 800;">🔑 TMDB API Key Setup</h2>
+            <p class="modal-synopsis" style="margin-top: 0.4rem;">
+              Enter your free TMDB v3 API key to load live weekend streaming releases. Your key is stored privately in your browser's local storage on this device and is never committed to code.
+            </p>
+          </div>
+          <form id="api-key-form" class="api-key-form">
+            <label for="api-key-input" class="weekend-picker-label">TMDB v3 API Key</label>
+            <input type="password" id="api-key-input" class="search-input api-key-input" placeholder="Paste your 32-character TMDB API key..." autocomplete="off" spellcheck="false" required>
+            <p id="api-key-error" class="api-key-error" style="display: none;" role="alert"></p>
+            <div class="modal-actions" style="margin-top: 0.25rem;">
+              <button type="submit" class="btn-primary" id="btn-save-api-key">Save &amp; Load Releases</button>
+              <button type="button" class="btn-secondary" id="btn-clear-api-key">Clear Saved Key</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -112,14 +143,5 @@
 
   <!-- Application scripts -->
   <script src="app.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('Service Worker registered successfully.', reg.scope))
-          .catch(err => console.error('Service Worker registration failed.', err));
-      });
-    }
-  </script>
 </body>
 </html>
